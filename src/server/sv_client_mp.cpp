@@ -614,6 +614,7 @@ void SV_DirectConnect( netadr_t from )
 	const char *denied;
 	int count;
 	int guid;
+	int ping;
 
 	Com_DPrintf("SV_DirectConnect()\n");
 	Q_strncpyz( userinfo, Cmd_Argv( 1 ), sizeof( userinfo ) );
@@ -654,12 +655,11 @@ void SV_DirectConnect( netadr_t from )
 	}
 
 	guid = 0;
+	ping = 0;
 
 	// see if the challenge is valid (local clients don't need to challenge)
 	if ( !NET_IsLocalAddress( from ) )
 	{
-		int ping;
-
 		for ( i = 0 ; i < MAX_CHALLENGES ; i++ )
 		{
 			if ( NET_CompareAdr( from, svs.challenges[i].adr ) )
@@ -689,11 +689,6 @@ void SV_DirectConnect( netadr_t from )
 
 		Com_Printf( "Client %i connecting with %i challenge ping from %s\n", i, ping, NET_AdrToString(from) );
 		svs.challenges[i].connected = qtrue;
-
-#ifdef LIBCOD
-		extern int client_challenge_ping[MAX_CLIENTS];
-		client_challenge_ping[i] = ping;
-#endif
 
 		// never reject a LAN client based on ping
 		if ( !Sys_IsLANAddress( from ) )
@@ -806,6 +801,8 @@ gotnewcl:
 	Netchan_Setup(NS_SERVER, &newcl->netchan, from, qport);
 #ifdef LIBCOD
 	newcl->netchan.protocol = version;
+	extern int client_challenge_ping[MAX_CLIENTS];
+	client_challenge_ping[clientNum] = ping;
 #endif
 	// init the netchan queue
 	newcl->voicePacketCount = 0;
