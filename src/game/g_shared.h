@@ -370,11 +370,9 @@ typedef struct playerState_s
 	int stats[MAX_STATS];
 	int ammo[MAX_WEAPONS];
 	int ammoclip[MAX_WEAPONS];
-	int weapons[2];
-	int oldweapons[2];
+	int weapons[4];
 	char weaponslots[8];
-	int weaponrechamber[2];
-	int oldweaponrechamber[2];
+	int weaponrechamber[4];
 	vec3_t mins;
 	vec3_t maxs;
 	float proneDirection;
