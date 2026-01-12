@@ -90,7 +90,7 @@ const char *stackGetParamTypeAsString(int param)
 }
 
 scr_function_t scriptFunctions[] =
-	{
+{
 #if LIBCOD_COMPILE_EXEC == 1
 	{"exec", gsc_exec, 0},
 	{"exec_async_create", gsc_exec_async_create, 0},
@@ -231,7 +231,7 @@ scr_function_t scriptFunctions[] =
 #include "extra/functions.hpp"
 #endif
 
-		{NULL, NULL, 0} /* terminator */
+	{NULL, NULL, 0} /* terminator */
 };
 
 xfunction_t Scr_GetCustomFunction(const char **fname, qboolean *fdev)
