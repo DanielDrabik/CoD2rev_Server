@@ -79,6 +79,9 @@ endif
 LIBCOD_DIR=$(SRC_DIR)/libcod
 LIBCOD_SOURCES=$(wildcard $(LIBCOD_DIR)/*.cpp)
 LIBCOD_OBJ=$(patsubst $(LIBCOD_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(LIBCOD_SOURCES))
+HASH_DIR=$(SRC_DIR)/libcod/hash
+HASH_SOURCES=$(wildcard $(HASH_DIR)/*.cpp)
+HASH_OBJ=$(patsubst $(HASH_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(HASH_SOURCES))
 ifeq ($(WITH_SQLITE),true)
 SQLITE_DIR=$(SRC_DIR)/libcod/sqlite
 SQLITE_SOURCES=$(wildcard $(SQLITE_DIR)/*.c)
@@ -127,7 +130,7 @@ ZLIB_OBJ=$(patsubst $(ZLIB_DIR)/%.c,$(OBJ_DIR)/%.o,$(ZLIB_SOURCES))
 cod2rev: mkdir $(TARGET)
     $(TARGET): \
 	$(BGAME_OBJ) $(GAME_OBJ) $(QCOMMON_OBJ) $(SCR_OBJ) $(SERVER_OBJ) $(STRINGED_OBJ) $(UNIVERSAL_OBJ) $(XANIM_OBJ) \
-	$(LINUX_OBJ) $(WIN32_OBJ) $(WIN32_RES_OBJ) $(ZLIB_OBJ) $(LIBCOD_OBJ) $(SQLITE_OBJ)
+	$(LINUX_OBJ) $(WIN32_OBJ) $(WIN32_RES_OBJ) $(ZLIB_OBJ) $(LIBCOD_OBJ) $(HASH_OBJ) $(SQLITE_OBJ)
 	$(CC) $(LFLAGS) -o $@ $^ $(LLIBS)
 
 ifeq ($(OS),Windows_NT)
@@ -207,6 +210,11 @@ $(OBJ_DIR)/%.o: $(ZLIB_DIR)/%.c
 
 # A rule to build libcod source code.
 $(OBJ_DIR)/%.o: $(LIBCOD_DIR)/%.cpp
+	@echo $(CC)  $@
+	@$(CC) -c $(CFLAGS) $(LIBCOD_SETTINGS) -o $@ $<
+
+# A rule to build hash source code.
+$(OBJ_DIR)/%.o: $(HASH_DIR)/%.cpp
 	@echo $(CC)  $@
 	@$(CC) -c $(CFLAGS) $(LIBCOD_SETTINGS) -o $@ $<
 

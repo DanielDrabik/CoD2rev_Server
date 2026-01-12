@@ -1,4 +1,5 @@
 #include "gsc_utils.hpp"
+#include "hash/md5.h"
 
 #if LIBCOD_COMPILE_UTILS == 1
 
@@ -934,6 +935,27 @@ void gsc_utils_remotecommand()
 	msg_t * msg = (msg_t *)pointerMsg;
 	NET_StringToAdr(sFrom, &from);
 	SVC_RemoteCommand(from, msg);
+}
+
+void gsc_utils_md5()
+{
+	char *str;
+
+	if (!stackGetParams("s", &str))
+	{
+		stackError("gsc_utils_md5() argument is undefined or has a wrong type");
+		stackPushUndefined();
+		return;
+	}
+
+	if (!strlen(str))
+	{
+		stackError("gsc_utils_md5() string length is 0");
+		stackPushUndefined();
+		return;
+	}
+
+	stackPushString(md5(str).c_str());
 }
 
 #endif

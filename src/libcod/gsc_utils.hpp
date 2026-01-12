@@ -45,5 +45,6 @@ void gsc_utils_vectorscale();
 void gsc_utils_remove_file();
 void gsc_utils_putchar();
 void gsc_utils_remotecommand();
+void gsc_utils_md5();
 
 #endif
