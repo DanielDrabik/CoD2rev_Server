@@ -1,0 +1,35 @@
+# CoD2rev Server Build Environment with MySQL support
+FROM debian:bullseye AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies including MySQL/MariaDB client libraries
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc-multilib \
+        g++-multilib \
+        make \
+        libc6-dev-i386 \
+        lib32stdc++-10-dev \
+        libmariadb-dev:i386 \
+        libmariadb-dev-compat:i386 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+COPY . .
+
+# Create mysql lib directory and symlink to system library
+# libmariadb-dev-compat provides libmysqlclient compatibility
+RUN mkdir -p src/libcod/mysql/unix/lib && \
+    ln -s /usr/lib/i386-linux-gnu/libmysqlclient.so src/libcod/mysql/unix/lib/libmysqlclient.so && \
+    ln -s /usr/lib/i386-linux-gnu/libmysqlclient.so.3 src/libcod/mysql/unix/lib/libmysqlclient.so.3
+
+# Fix linker flags order - move -ldl to LLIBS (must come after object files)
+RUN sed -i 's/LFLAGS=-m32 -no-pie -ldl/LFLAGS=-m32 -no-pie/' Makefile && \
+    sed -i 's/LLIBS=-lm -lpthread -lstdc++/LLIBS=-lm -lpthread -lstdc++ -ldl/' Makefile
+
+# Build with MySQL support enabled
+RUN make clean || true && make WITH_MYSQL=true
