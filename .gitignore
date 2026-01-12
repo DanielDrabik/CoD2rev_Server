@@ -38,6 +38,7 @@
 *.cfg
 
 bin/**
+!bin/.gitkeep
 main/**
 obj/**
 obj_test/**
