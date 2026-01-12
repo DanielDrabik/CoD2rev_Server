@@ -734,6 +734,122 @@ void SVC_Status( netadr_t from )
 }
 
 /*
+================
+SVC_StatusNew
+Extended version of SVC_Status that includes player GUIDs.
+Response format per player: score ping guid "name"
+================
+*/
+void SVC_StatusNew(netadr_t from)
+{
+	int i;
+	char infostring[8192];
+	char msg[8192];
+	char keywords[MAX_INFO_STRING];
+	char status[MAX_MSGLEN];
+	client_t    *cl;
+	int statusLength;
+	int playerLength;
+	char player[MAX_INFO_STRING];
+	int count;
+
+#if LIBCOD_COMPILE_RATELIMITER == 1
+	extern leakyBucket_t outboundLeakyBucket;
+	// Prevent using getstatus2 as an amplifier
+	if ( SVC_RateLimitAddress( from, 10, 1000 ) )
+	{
+		Com_DPrintf("SVC_StatusNew: rate limit from %s exceeded, dropping request\n", NET_AdrToString(from));
+		return;
+	}
+
+	// Allow getstatus2 to be DoSed relatively easily, but prevent
+	// excess outbound bandwidth usage when being flooded inbound
+	if ( SVC_RateLimit( &outboundLeakyBucket, 10, 100 ) )
+	{
+		Com_DPrintf("SVC_StatusNew: rate limit exceeded, dropping request\n");
+		return;
+	}
+#endif
+
+	qboolean serverModded = qfalse;
+	strcpy( infostring, Dvar_InfoString(DVAR_SERVERINFO | DVAR_SERVERINFO_NOUPDATE) );
+
+	// echo back the parameter to status. so master servers can use it as a challenge
+	// to prevent timed spoofed reply packets that add ghost servers
+	Info_SetValueForKey( infostring, "challenge", Cmd_Argv( 1 ) );
+
+	// add "demo" to the sv_keywords if restricted
+	if ( Dvar_GetBool( "fs_restrict" ) )
+	{
+		Com_sprintf(keywords, sizeof( keywords ), "demo %s", Info_ValueForKey(infostring, "sv_keywords"));
+		Info_SetValueForKey(infostring, "sv_keywords", keywords);
+	}
+
+	status[0] = 0;
+	statusLength = 0;
+
+	for ( i = 0 ; i < sv_maxclients->current.integer ; i++ )
+	{
+		cl = &svs.clients[i];
+		if ( cl->state >= CS_CONNECTED )
+		{
+			if ( gameInitialized )
+				Com_sprintf( player, sizeof( player ), "%i %i %i \"%s\"\n", G_GetClientScore(cl - svs.clients), cl->ping, cl->guid, cl->name );
+			else
+				Com_sprintf( player, sizeof( player ), "%i %i %i \"%s\"\n", 0, cl->ping, cl->guid, cl->name );
+
+			playerLength = strlen( player );
+			if ( statusLength + playerLength >= sizeof( status ) )
+			{
+				break;      // can't hold any more
+			}
+			strcpy( status + statusLength, player );
+			statusLength += playerLength;
+		}
+	}
+
+	const char *password = Dvar_GetString("g_password");
+
+	if ( password && *password )
+		Info_SetValueForKey(infostring, "pswrd", "1");
+	else
+		Info_SetValueForKey(infostring, "pswrd", "0");
+
+	const char *gamedir = Dvar_GetString("fs_game");
+
+	if ( !sv_pure->current.boolean || gamedir && *gamedir )
+	{
+		serverModded = qtrue;
+	}
+	else
+	{
+		const char *referencedIwdNames = Dvar_GetString("sv_referencedIwdNames");
+
+		if ( *referencedIwdNames )
+		{
+			SV_Cmd_TokenizeString(referencedIwdNames);
+			count = SV_Cmd_Argc();
+
+			for ( i = 0; i < count; ++i )
+			{
+				char *iwd = (char *)SV_Cmd_Argv(i);
+
+				if ( !FS_iwIwd(iwd, BASEGAME) )
+				{
+					serverModded = qtrue;
+					break;
+				}
+			}
+		}
+	}
+
+	Info_SetValueForKey(infostring, "mod", va("%i", serverModded));
+
+	Com_sprintf(msg, sizeof(infostring), "statusResponseNew\n%s\n%s", infostring, status);
+	NET_OutOfBandPrint(NS_SERVER, from, msg);
+}
+
+/*
 =================
 SVC_GameCompleteStatus
 NERVE - SMF - Send serverinfo cvars, etc to master servers when
@@ -823,6 +939,10 @@ void SV_ConnectionlessPacket( netadr_t from, msg_t *msg )
 	else if ( !Q_stricmp( c,"getstatus" ) )
 	{
 		SVC_Status( from  );
+	}
+	else if ( !Q_stricmp( c,"getstatusnew" ) )
+	{
+		SVC_StatusNew(from);
 	}
 	else if ( !Q_stricmp( c,"getinfo" ) )
 	{
