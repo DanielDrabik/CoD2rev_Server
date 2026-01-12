@@ -31,5 +31,5 @@ RUN mkdir -p src/libcod/mysql/unix/lib && \
 RUN sed -i 's/LFLAGS=-m32 -no-pie -ldl/LFLAGS=-m32 -no-pie/' Makefile && \
     sed -i 's/LLIBS=-lm -lpthread -lstdc++/LLIBS=-lm -lpthread -lstdc++ -ldl/' Makefile
 
-# Build with MySQL support enabled
-RUN make clean || true && make WITH_MYSQL=true
+# Build with MySQL support enabled, SQLite disabled
+RUN make clean || true && make WITH_MYSQL=true WITH_SQLITE=false
