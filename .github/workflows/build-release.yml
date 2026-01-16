@@ -1,0 +1,67 @@
+name: Build and Release Binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: false
+        default: ''
+
+env:
+  BINARY_NAME: cod2rev_lnxded
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build binary using Docker
+        run: |
+          docker build -f Dockerfile.build -t cod2rev-builder .
+
+          # Extract binary from the builder image
+          docker create --name extract cod2rev-builder
+          docker cp extract:/build/bin/${{ env.BINARY_NAME }} ./${{ env.BINARY_NAME }}
+          docker rm extract
+
+          # Verify binary exists
+          ls -la ${{ env.BINARY_NAME }}
+          file ${{ env.BINARY_NAME }}
+
+      - name: Generate version tag
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=build-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: CoD2rev Server ${{ steps.version.outputs.tag }}
+          body: |
+            ## CoD2rev Server Binary
+
+            Built from commit: ${{ github.sha }}
+            Build date: ${{ github.event.repository.updated_at }}
+
+            ### Download
+            - `cod2rev_lnxded` - Linux dedicated server binary (32-bit)
+
+            ### Usage
+            This binary is used by the main mircod repository.
+          files: ${{ env.BINARY_NAME }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
